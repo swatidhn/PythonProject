@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sakhi by Beautifully Broken</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { 
+            background: linear-gradient(135deg,#dbeafe,#f3e8ff); 
+            font-family:"Segoe UI",sans-serif; 
+            margin:0; 
+            height:100vh; 
+            display:flex; 
+            align-items:center; 
+            justify-content:center; 
+        }
+        .chat-card { 
+            width:100%; 
+            max-width:480px; 
+            height:90vh; 
+            display:flex; 
+            flex-direction:column; 
+            background:#fff; 
+            border-radius:20px; 
+            box-shadow:0 6px 20px rgba(0,0,0,0.2); 
+            overflow:hidden; 
+        }
+        header { 
+            text-align:center; 
+            padding:12px; 
+            background:linear-gradient(135deg,#0a393d,#2ab17f); 
+            color:#fff; 
+        }
+        header img { width:50px; margin-bottom:5px; }
+        header h1 { font-size:1.6rem; margin:0; font-weight:bold; }
+        .chatbot-name { font-weight:bold; color:#2bdf85; }
+        .chat-container { 
+            flex:1; 
+            background:#ace590; 
+            padding:12px; 
+            overflow-y:auto; 
+            display:flex; 
+            flex-direction:column; 
+            gap:10px; 
+        }
+        .message { 
+            max-width:75%; 
+            padding:10px 14px; 
+            border-radius:16px; 
+            line-height:1.4; 
+            word-wrap:break-word; 
+        }
+        .user { 
+            align-self:flex-end; 
+            background:#2ab17f; 
+            color:#fff; 
+            border-bottom-right-radius:4px; 
+        }
+        .bot { 
+            align-self:flex-start; 
+            background:#e6fffa; 
+            color:#0a393d; 
+            border-bottom-left-radius:4px; 
+        }
+        .typing { 
+            font-style:italic; 
+            display:flex; 
+            align-items:center; 
+            gap:6px; 
+        }
+        .typing img { 
+            width:18px; 
+            height:18px; 
+            animation:bounce 1.2s infinite; 
+        }
+        @keyframes bounce { 0%,100%{transform:translateY(0);}50%{transform:translateY(-3px);} }
+        .bot img { max-width:100%; border-radius:12px; margin-top:5px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="chat-card">
+        <header>
+            <img src="{{ url_for('static', path='butterfly.png') }}" alt="Logo">
+            <h1>Sakhi</h1>
+            <div class="chatbot-name">✨ by Beautifully Broken</div>
+            <p class="mb-0">💚 Your safe space for <strong>mental health</strong></p>
+        </header>
+
+        <div class="chat-container" id="chat-container">
+            {% for msg in chat_log %}
+            <div class="message {{ 'user' if msg.role=='user' else 'bot' }}">
+                {{ msg.content }}
+            </div>
+            {% endfor %}
+        </div>
+
+        <form class="input-group p-2" id="chat-form">
+            <input type="text" id="user-input" name="user_input" class="form-control" placeholder="Type your thoughts..." required>
+            <button class="btn btn-success" type="submit">Send</button>
+            <button class="btn btn-light" type="button" id="clear-btn" title="Clear chat">🩹</button>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const form = document.getElementById("chat-form");
+const chatContainer = document.getElementById("chat-container");
+
+form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const input = document.getElementById("user-input");
+    const userMessage = input.value.trim();
+    if (!userMessage) return;
+
+    // Show user message
+    const userDiv = document.createElement("div");
+    userDiv.className = "message user";
+    userDiv.textContent = userMessage;
+    chatContainer.appendChild(userDiv);
+
+    // Typing indicator
+    const typingDiv = document.createElement("div");
+    typingDiv.className = "message bot typing";
+    typingDiv.innerHTML = `<img src="{{ url_for('static', path='butterfly.png') }}" alt="typing"> typing...`;
+    chatContainer.appendChild(typingDiv);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+
+    // Send to backend
+    const response = await fetch("/", {
+        method: "POST",
+        body: new URLSearchParams({ "user_input": userMessage }),
+        headers: { "Content-Type": "application/x-www-form-urlencoded" }
+    });
+
+    const data = await response.json();
+    chatContainer.removeChild(typingDiv);
+
+    // Show bot response
+    const botDiv = document.createElement("div");
+    botDiv.className = "message bot";
+
+    if (data.type === "image") {
+        botDiv.innerHTML = `<p>Here’s something calming for you 🌸</p><img src="${data.image_url}" alt="Generated Image">`;
+    } else if (data.type === "text") {
+        botDiv.textContent = data.bot_response;
+    }
+
+    chatContainer.appendChild(botDiv);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    input.value = "";
+});
+
+const clearBtn = document.getElementById("clear-btn");
+clearBtn.addEventListener("click", async () => {
+    await fetch("/clear", { method: "POST" });
+    chatContainer.innerHTML = "";  // Clear UI messages
+});
+</script>
+</body>
+</html>
