@@ -100,8 +100,7 @@ async def chat(user_input: str = Form(...)):
             if func == suggest_breathing:
                 bot_response = func()
             elif func == fetch_affirmations:
-                affirmations = func()
-                bot_response = "\n".join(affirmations)
+                bot_response = func()
             elif func == fetch_journal_prompt:
                 bot_response = func()
             else:
